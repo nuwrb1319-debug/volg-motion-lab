@@ -12,7 +12,19 @@
 <main class="wrap">
 <section class="card"><h2>1. 選手・動画</h2><div class="row"><div class="field"><label for="athlete">選手名</label><input id="athlete" type="text" placeholder="例：山田 花子"></div><div class="field"><label for="view">撮影方向</label><select id="view"><option>側面</option><option>正面</option><option>背面</option><option>斜め</option></select></div></div><div style="margin-top:12px"><label for="file">動画ファイル</label><input id="file" type="file" accept="video/*"><p class="hint">最初は短い動画（5〜15秒）で試してください。解析モデルの初回読み込みにはインターネット接続が必要です。短いMP4で試してください。</p></div></section>
 <section class="twocol">
-<div class="card"><h2>2. 動画と骨格</h2><div class="video-wrap" id="videoWrap"><video id="video" controls playsinline></video><canvas id="overlay"></canvas></div><div class="row" style="margin-top:12px"><button class="btn" id="start" disabled>解析を開始</button><button class="btn secondary" id="stop" disabled>解析を停止</button></div><div class="row" style="margin-top:10px" aria-label="再生速度"><span class="hint">再生速度：</span><button class="speed-btn" data-speed="0.25">0.25倍</button><button class="speed-btn" data-speed="0.5">0.5倍</button><button class="speed-btn" data-speed="0.75">0.75倍</button><button class="speed-btn active" data-speed="1">通常</button></div><div id="status" class="status" style="margin-top:10px">動画を選択してください。</div></div>
+<div class="card"><h2>2. 動画と骨格</h2><div class="video-wrap" id="videoWrap"><video id="video" controls playsinline></video><canvas id="overlay"></canvas></div><div class="row" style="margin-top:12px"><button class="btn" id="start" disabled>解析を開始</button><button class="btn secondary" id="stop" disabled>解析を停止</button></div><div class="row" style="margin-top:10px" aria-label="再生速度"><span class="hint">再生速度：</span><button class="speed-btn" data-speed="0.25">0.25倍</button><button class="speed-btn" data-speed="0.5">0.5倍</button><button class="speed-btn" data-speed="0.75">0.75倍</button><button class="speed-btn active" data-speed="1">通常</button></div><div 
+<div class="row" style="margin-top:10px">
+  <label for="frameRate">コマ送りの基準</label>
+  <select id="frameRate">
+    <option value="30">30 fps</option>
+    <option value="60">60 fps</option>
+    <option value="120">120 fps</option>
+    <option value="240">240 fps</option>
+  </select>
+  <button class="btn secondary" id="prevFrame">1コマ戻る</button>
+  <button class="btn secondary" id="nextFrame">1コマ進む</button>
+</div>
+id="status" class="status" style="margin-top:10px">動画を選択してください。</div></div>
 <div class="card"><h2>3. 目安の数値</h2><div class="metrics"><div class="metric"><small>右膝角度</small><strong id="rk">—°</strong></div><div class="metric"><small>左膝角度</small><strong id="lk">—°</strong></div><div class="metric"><small>右股関節角度</small><strong id="rh">—°</strong></div><div class="metric"><small>左股関節角度</small><strong id="lh">—°</strong></div></div><p class="hint" style="margin-top:12px">角度は2D映像からの概算です。撮影角度・遮蔽・服装などで誤差が出ます。数値だけで故障やフォームの良否を断定しないでください。</p></div>
 </section>
 <section class="card"><h2>4. 動作の特徴・改善候補</h2><p class="hint">動画から観察できる動作の手がかりを表示します。撮影角度やタイミングの影響が大きく、原因の確定診断ではありません。特に側面映像で確認してください。</p><div id="findings"><div class="finding">動画を解析すると、観察できた特徴と確認ポイントがここに表示されます。</div></div></section><section class="card"><h2>5. 所見・練習メモ</h2><label for="notes">コーチメモ</label><textarea id="notes" rows="4" placeholder="例：接地位置、骨盤、腕振り、左右差、次回の確認事項"></textarea><div class="row" style="margin-top:10px"><button class="btn" id="save">選手記録を保存</button><button class="btn secondary" id="export">記録をJSONで書き出す</button></div><p class="hint">記録はこの端末のブラウザ内に保存されます。ブラウザデータを消すと失われるため、必要に応じてJSONを書き出してください。</p><div id="records"></div></section>
@@ -27,13 +39,155 @@ function resizeCanvas(){if(video.videoWidth&&video.videoHeight){canvas.width=vid
 function drawPose(result){ctx.clearRect(0,0,canvas.width,canvas.height);const lm=result?.landmarks?.[0];if(!lm)return;const links=visionModule?.PoseLandmarker?.POSE_CONNECTIONS||[];ctx.lineWidth=Math.max(2,canvas.width/320);ctx.strokeStyle='#e7b84f';for(const c of links){const a=lm[c.start],b=lm[c.end];if(a&&b&&(a.visibility??1)>.25&&(b.visibility??1)>.25){ctx.beginPath();ctx.moveTo(a.x*canvas.width,a.y*canvas.height);ctx.lineTo(b.x*canvas.width,b.y*canvas.height);ctx.stroke()}}ctx.fillStyle='#fff';for(const p of lm){if((p.visibility??1)>.35){ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(2,canvas.width/220),0,Math.PI*2);ctx.fill()}}const m=visionModule?.PoseLandmarker?.POSE_LANDMARKS;if(m){const get=(n)=>lm[m[n]];setMetric('rk',angle(get('RIGHT_HIP'),get('RIGHT_KNEE'),get('RIGHT_ANKLE')));setMetric('lk',angle(get('LEFT_HIP'),get('LEFT_KNEE'),get('LEFT_ANKLE')));setMetric('rh',angle(get('RIGHT_SHOULDER'),get('RIGHT_HIP'),get('RIGHT_KNEE')));setMetric('lh',angle(get('LEFT_SHOULDER'),get('LEFT_HIP'),get('LEFT_KNEE')))}}
 async function loadModel(){if(landmarker)return landmarker;status('解析モデルを読み込んでいます。初回は少し時間がかかります…');try{visionModule=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');const files=await visionModule.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');landmarker=await visionModule.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});return landmarker}catch(e){landmarker=null;throw new Error('解析モデルを読み込めませんでした。ネット接続を確認し、ページを再読み込みしてください。詳細: '+(e?.message||e))}}
 function loop(){if(!running)return;if(video.readyState>=2&&video.currentTime!==lastTime){try{resizeCanvas();frameCtx.drawImage(video,0,0,frameCanvas.width,frameCanvas.height);const result=landmarker.detectForVideo(frameCanvas,performance.now());drawPose(result);if(video.currentTime-lastSampleAt>=0.20){collectFindingSample(result);lastSampleAt=video.currentTime}lastTime=video.currentTime}catch(e){running=false;status('解析中にエラーが発生しました。別の短いMP4動画でも試してください。詳細: '+(e?.message||e),true);$('stop').disabled=true;return}}raf=requestAnimationFrame(loop)}
+
+function stepFrame(direction) {
+  if (!video.src || !Number.isFinite(video.duration)) {
+    status('先に動画を選択してください。', true);
+    return;
+  }
+
+  const fps = Number($('frameRate').value);
+  video.pause();
+
+  const nextTime = video.currentTime + direction / fps;
+  video.currentTime = Math.max(
+    0,
+    Math.min(video.duration, nextTime)
+  );
+}
+
+$('prevFrame').addEventListener('click', () => {
+  stepFrame(-1);
+});
+
+$('nextFrame').addEventListener('click', () => {
+  stepFrame(1);
+});
 $('file').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;running=false;cancelAnimationFrame(raf);if(video.src&&video.src.startsWith('blob:'))URL.revokeObjectURL(video.src);video.pause();video.playbackRate=1;video.src=URL.createObjectURL(f);video.load();samples=[];lastSampleAt=-1;$('findings').innerHTML='<div class="finding">解析すると観察ポイントが表示されます。</div>';$('start').disabled=false;$('stop').disabled=true;status('動画を読み込みました。まず「解析を開始」を押してください。');ctx.clearRect(0,0,canvas.width,canvas.height)});
  document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{const speed=Number(b.dataset.speed);video.playbackRate=speed;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));status(`再生速度を${speed}倍にしました。動画を一時停止して左右のキー操作またはシークバーでコマ付近を確認できます。`)}));
 video.addEventListener('loadedmetadata',resizeCanvas);video.addEventListener('seeked',()=>{if(landmarker&&video.readyState>=2){try{resizeCanvas();frameCtx.drawImage(video,0,0,frameCanvas.width,frameCanvas.height);drawPose(landmarker.detectForVideo(frameCanvas,performance.now()))}catch(e){status('フレーム解析エラー: '+e.message,true)}}});
 $('start').addEventListener('click',async()=>{if(!video.src){status('先に動画ファイルを選択してください。',true);return}try{$('start').disabled=true;await loadModel();running=true;lastTime=-1;lastSampleAt=-1;samples=[];$('stop').disabled=false;status('解析中です。動画を再生すると骨格を重ねて表示します。初回はモデルの読み込みに時間がかかります。');if(video.paused)await video.play().catch(()=>{});loop()}catch(e){status(e.message,true);$('start').disabled=false;$('stop').disabled=true}});
 $('stop').addEventListener('click',()=>{running=false;cancelAnimationFrame(raf);$('stop').disabled=true;$('start').disabled=false;status('解析を停止しました。再開するには「解析を開始」を押してください。')});
 function collectFindingSample(result){const lm=result?.landmarks?.[0];if(!lm)return;const vis=i=>(lm[i]?.visibility??0);const p=i=>lm[i];const ang=(a,b,c)=>angle(p(a),p(b),p(c));const sample={t:video.currentTime,lh:ang(11,23,25),rh:ang(12,24,26),lk:ang(23,25,27),rk:ang(24,26,28),leftWrist: p(15)?.y, rightWrist:p(16)?.y,leftElbow:p(13)?.y,rightElbow:p(14)?.y,leftHip:p(23)?.y,rightHip:p(24)?.y,leftAnkleX:p(27)?.x,rightAnkleX:p(28)?.x,leftHipX:p(23)?.x,rightHipX:p(24)?.x,visibility:Math.min(...[11,12,23,24,25,26,27,28].map(vis))};if(sample.visibility>.35)samples.push(sample);if(samples.length>250)samples.shift();renderFindings()}
-function renderFindings(){if(!samples.length)return;const view=$('view').value;const f=[];const latest=samples[samples.length-1];const med=k=>{const a=samples.map(s=>s[k]).filter(Number.isFinite).sort((a,b)=>a-b);return a.length?a[Math.floor(a.length/2)]:null};const lK=med('lk'),rK=med('rk'),lH=med('lh'),rH=med('rh');if(lK!==null&&rK!==null){const d=Math.abs(lK-rK);if(d>=25)f.push({type:'warn',title:'左右の膝角度に差が見られる',text:`解析サンプルの中央値：左 ${lK}°／右 ${rK}°（差 ${d}°）。同じ走行局面で比較できているか、カメラ角度や脚の隠れを確認してください。`});else f.push({type:'good',title:'膝角度の左右差は今回の映像では大きくありません',text:`中央値：左 ${lK}°／右 ${rK}°。局面ごとの比較と接地タイミングの確認は引き続き必要です。`})}if(lH!==null&&rH!==null&&Math.abs(lH-rH)>=25)f.push({type:'warn',title:'股関節角度の左右差が見られる',text:`中央値：左 ${lH}°／右 ${rH}°。腕や骨盤の回旋、脚の前後位置が影響していないか、正面・背面映像も合わせて確認してください。`});if(view==='側面'&&samples.length>=8){const diffs=samples.map(s=>{if(!Number.isFinite(s.leftAnkleX)||!Number.isFinite(s.leftHipX)||!Number.isFinite(s.rightAnkleX)||!Number.isFinite(s.rightHipX))return null;return Math.max(Math.abs(s.leftAnkleX-s.leftHipX),Math.abs(s.rightAnkleX-s.rightHipX))}).filter(Number.isFinite);if(diffs.length){const avg=diffs.reduce((a,b)=>a+b,0)/diffs.length;if(avg>.28)f.push({type:'warn',title:'足部と股関節の水平距離が大きいフレームがあります',text:'接地直前に足が身体の前方へ出ていないかをスロー再生で確認してください。これは走行方向を自動判定していない参考値で、オーバーストライドの確定判定ではありません。'})}}if(!f.length)f.push({type:'',title:'現時点では明確な左右差を判定できません',text:'全身が映る明るい動画で、脚や腕が隠れない角度から撮影してください。接地・最大支持・離地など局面を分けて観察するのがおすすめです。'});$('findings').innerHTML='';f.forEach(x=>{const d=document.createElement('div');d.className='finding '+x.type;const b=document.createElement('strong');b.textContent=x.title;const p=document.createElement('div');p.textContent=x.text;d.append(b,p);$('findings').append(d)});const note='【動画からの観察候補】\n'+f.map(x=>x.title+'：'+x.text).join('\n');if(!$('notes').value.trim())$('notes').value=note}
+
+function renderFindings() {
+  const root = $('findings');
+  root.replaceChildren();
+
+  const addFinding = (type, title, text) => {
+    const box = document.createElement('div');
+    box.className = 'finding ' + type;
+
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+
+    const body = document.createElement('div');
+    body.textContent = text;
+
+    box.append(heading, body);
+    root.append(box);
+  };
+
+  if (samples.length < 8) {
+    addFinding(
+      'info',
+      'まだ評価データが不足しています',
+      `現在の有効サンプルは${samples.length}件です。`
+      + '全身が映る動画で複数の走行局面を記録してください。'
+      + '少ないサンプルだけではフォームの良否を判定しません。'
+    );
+    return;
+  }
+
+  const median = key => {
+    const values = samples
+      .map(s => s[key])
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
+
+    return values.length
+      ? values[Math.floor(values.length / 2)]
+      : null;
+  };
+
+  const leftKnee = median('lk');
+  const rightKnee = median('rk');
+  const leftHip = median('lh');
+  const rightHip = median('rh');
+
+  addFinding(
+    'good',
+    '確認できていること',
+    `骨格推定で有効なサンプルを${samples.length}件取得しました。`
+    + 'これは解析データが得られたという意味で、'
+    + '走動作が良好であることを意味しません。'
+  );
+
+  if (leftKnee !== null && rightKnee !== null) {
+    const difference = Math.abs(leftKnee - rightKnee);
+
+    addFinding(
+      difference >= 25 ? 'warn' : 'info',
+      difference >= 25
+        ? '左右の膝角度に差があるため要確認'
+        : '左右の膝角度を記録できています',
+      `左膝の中央値：${leftKnee}°、`
+      + `右膝の中央値：${rightKnee}°、差：${difference}°。`
+      + '走行局面が左右で異なると差が大きくなるため、'
+      + '同じ局面のフレーム同士で比較してください。'
+      + 'この数値だけで異常とは判定できません。'
+    );
+  }
+
+  if (leftHip !== null && rightHip !== null) {
+    const difference = Math.abs(leftHip - rightHip);
+
+    addFinding(
+      difference >= 25 ? 'warn' : 'info',
+      difference >= 25
+        ? '股関節角度の左右差を確認'
+        : '股関節角度を記録できています',
+      `左股関節の中央値：${leftHip}°、`
+      + `右股関節の中央値：${rightHip}°、差：${difference}°。`
+      + '骨盤の回旋、身体の向き、関節の隠れ、'
+      + '左右の脚の局面の違いも確認してください。'
+    );
+  }
+
+  if ($('view').value === '側面') {
+    addFinding(
+      'info',
+      '指導者が確認するポイント：側面',
+      '1. 接地直前に足が身体より大きく前へ出ていないか。'
+      + ' 2. 支持期に骨盤が過度に落ちていないか。'
+      + ' 3. 遊脚の膝が前方へ回収されるタイミング。'
+      + ' 4. 体幹の傾きが加速・最大速度の局面に合っているか。'
+      + 'これらは動画をスロー再生して確認する項目です。'
+      + '現在の自動計測だけでは確定できません。'
+    );
+  } else {
+    addFinding(
+      'info',
+      '指導者が確認するポイント：正面・背面',
+      '1. 頭部・胸郭・骨盤の左右への移動。'
+      + ' 2. 左右の腕振りの大きさとタイミング。'
+      + ' 3. 膝と足部の向き。'
+      + ' 4. 同じ走行局面での左右差。'
+      + 'カメラの傾きや身体の回旋も考慮してください。'
+    );
+  }
+
+  addFinding(
+    'warn',
+    '自動評価の限界',
+    'この所見は2D骨格の参考情報です。'
+    + '接地時間、筋力、故障リスク、動作の原因を'
+    + 'このデータだけで確定することはできません。'
+    + '重要な課題は、該当フレームを記録して'
+    + '指導者が映像と競技状況を合わせて判断してください。'
+  );
+}
+
 const KEY='volg_simple_records_v1';function getRecords(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}}function renderRecords(){const root=$('records');root.innerHTML='';const records=getRecords();if(!records.length){root.innerHTML='<p class="hint">保存された記録はまだありません。</p>';return}records.slice().reverse().forEach(r=>{const d=document.createElement('div');d.className='saved';const title=document.createElement('strong');title.textContent=`${r.name||'名前未入力'}｜${r.date}｜${r.view}`;const p=document.createElement('p');p.textContent=r.notes||'メモなし';d.append(title,p);root.append(d)})}
 $('save').addEventListener('click',()=>{const r={name:$('athlete').value.trim(),view:$('view').value,date:new Date().toLocaleString('ja-JP'),notes:$('notes').value};try{const a=getRecords();a.push(r);localStorage.setItem(KEY,JSON.stringify(a));renderRecords();status('選手記録をこの端末に保存しました。')}catch(e){status('記録を保存できませんでした。端末の空き容量やブラウザ設定を確認してください。',true)}});
 $('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(getRecords(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='volg-athlete-records.json';a.click();URL.revokeObjectURL(url)});
