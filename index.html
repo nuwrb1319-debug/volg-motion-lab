@@ -12,16 +12,7 @@
 <main class="wrap">
 <section class="card"><h2>1. 選手・動画</h2><div class="row"><div class="field"><label for="athlete">選手名</label><input id="athlete" type="text" placeholder="例：山田 花子"></div><div class="field"><label for="view">撮影方向</label><select id="view"><option>側面</option><option>正面</option><option>背面</option><option>斜め</option></select></div></div><div style="margin-top:12px"><label for="file">動画ファイル</label><input id="file" type="file" accept="video/*"><p class="hint">最初は短い動画（5〜15秒）で試してください。解析モデルの初回読み込みにはインターネット接続が必要です。短いMP4で試してください。</p></div></section>
 <section class="twocol">
-<div class="card"><h2>2. 動画と骨格</h2><div class="video-wrap" id="videoWrap"><video id="video" controls playsinline></video><canvas id="overlay"></canvas></div><div class="row" style="margin-top:12px"><button class="btn" id="start" disabled>解析を開始</button><button class="btn secondary" id="stop" disabled>解析を停止</button></div><div class="row" style="margin-top:10px" aria-label="再生速度"><span class="hint">再生速度：</span><button class="speed-btn" data-speed="0.25">0.25倍</button><button class="speed-btn" data-speed="0.5">0.5倍</button><button class="speed-btn" data-speed="0.75">0.75倍</button><button class="speed-btn active" data-speed="1">通常</button></div><div 
-
-<div class="row" style="margin-top:10px" aria-label="再生速度">
-  <span class="hint">再生速度：</span>
-  <button class="speed-btn" data-speed="0.25">0.25倍</button>
-  <button class="speed-btn" data-speed="0.5">0.5倍</button>
-  <button class="speed-btn" data-speed="0.75">0.75倍</button>
-  <button class="speed-btn active" data-speed="1">通常</button>
-</div>
-
+<div class="card"><h2>2. 動画と骨格</h2><div class="video-wrap" id="videoWrap"><video id="video" controls playsinline></video><canvas id="overlay"></canvas></div><div class="row" style="margin-top:12px"><button class="btn" id="start" disabled>解析を開始</button><button class="btn secondary" id="stop" disabled>解析を停止</button></div><div class="row" style="margin-top:10px" aria-label="再生速度"><span class="hint">再生速度：</span><button class="speed-btn" data-speed="0.25">0.25倍</button><button class="speed-btn" data-speed="0.5">0.5倍</button><button class="speed-btn" data-speed="0.75">0.75倍</button><button class="speed-btn active" data-speed="1">通常</button></div>
 <div class="row" style="margin-top:10px">
   <label for="frameRate">コマ送りの基準</label>
   <select id="frameRate">
@@ -38,8 +29,6 @@
   動画を選択してください。
 </div>
 </div>
-
-id="status" class="status" style="margin-top:10px">動画を選択してください。</div></div>
 <div class="card"><h2>3. 目安の数値</h2><div class="metrics"><div class="metric"><small>右膝角度</small><strong id="rk">—°</strong></div><div class="metric"><small>左膝角度</small><strong id="lk">—°</strong></div><div class="metric"><small>右股関節角度</small><strong id="rh">—°</strong></div><div class="metric"><small>左股関節角度</small><strong id="lh">—°</strong></div></div><p class="hint" style="margin-top:12px">角度は2D映像からの概算です。撮影角度・遮蔽・服装などで誤差が出ます。数値だけで故障やフォームの良否を断定しないでください。</p></div>
 </section>
 <section class="card"><h2>4. 動作の特徴・改善候補</h2><p class="hint">動画から観察できる動作の手がかりを表示します。撮影角度やタイミングの影響が大きく、原因の確定診断ではありません。特に側面映像で確認してください。</p><div id="findings"><div class="finding">動画を解析すると、観察できた特徴と確認ポイントがここに表示されます。</div></div></section><section class="card"><h2>5. 所見・練習メモ</h2><label for="notes">コーチメモ</label><textarea id="notes" rows="4" placeholder="例：接地位置、骨盤、腕振り、左右差、次回の確認事項"></textarea><div class="row" style="margin-top:10px"><button class="btn" id="save">選手記録を保存</button><button class="btn secondary" id="export">記録をJSONで書き出す</button></div><p class="hint">記録はこの端末のブラウザ内に保存されます。ブラウザデータを消すと失われるため、必要に応じてJSONを書き出してください。</p><div id="records"></div></section>
